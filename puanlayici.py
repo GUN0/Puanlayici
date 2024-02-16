@@ -1,11 +1,15 @@
 import pandas as pd
+import numpy as np
 from pandasgui import show
 import os
+import yfinance as yf
+from datetime import datetime, timedelta
 
 directory = sorted(os.listdir('/home/gun/Documents/CalculatedRatios'))
 
 num_rows = []
 stocks = []
+list_of_df = []
 
 for i in directory:
     file = pd.read_excel(f'/home/gun/Documents/CalculatedRatios/{i}')
@@ -87,4 +91,33 @@ for j in range(longes_row + 1):
                                   hisseler_df['Özkaynak Karlılığı Puan'])
    
     hisseler_df = hisseler_df.sort_values(by='Toplam Puan', ascending=False)
-    show(hisseler_df)
+
+    stck = (hisseler_df.index.tolist())
+    stck = stck[:5]
+    # list_of_df.append(hisseler_df)
+    # show(hisseler_df)
+
+    for d in stck:
+        yfstock = d + '.IS'
+        amele = pd.read_excel('/home/gun/Documents/Amele/RaporTarihleri/{}.xlsx'.format(d))
+        raw_date = amele[0].iloc[j]
+        raw_date = datetime.strptime(raw_date, '%Y/%m/%d').strftime('%Y-%m-%d')
+        date = datetime.strptime(raw_date, '%Y-%m-%d')
+        buy_date = date + timedelta(days=1)
+        
+        while buy_date.weekday() >= 5:
+            days_until_monday = (7 - buy_date.weekday()) % 7
+            buy_date += timedelta(days=days_until_monday)
+
+        buy_date_str = buy_date.strftime('%Y-%m-%d')
+        data = yf.download(yfstock, start=buy_date_str)['Close']
+        buy_price = round(data.iloc[0], 2)
+        sell_price = round(data.iloc[-1], 2)
+        
+        print('Stock: ', d)
+        print('Date: ', buy_date_str)
+        print('Buying Price: ', buy_price)
+        print('Selling Price: ', sell_price)
+        # break
+
+    break
