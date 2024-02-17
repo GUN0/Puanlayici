@@ -90,34 +90,57 @@ for j in range(longes_row + 1):
                                   hisseler_df['Net Kar Marjı Yıllık Puan'] + 
                                   hisseler_df['Özkaynak Karlılığı Puan'])
    
-    hisseler_df = hisseler_df.sort_values(by='Toplam Puan', ascending=False)
+    # hisseler_df = hisseler_df.sort_values(by='Toplam Puan', ascending=False)
 
     stck = (hisseler_df.index.tolist())
-    stck = stck[:5]
+    percent_change = []
+    last_trading_day = '2024/02/15'
+    # stck = stck[:5]
     # list_of_df.append(hisseler_df)
-    # show(hisseler_df)
 
     for d in stck:
         yfstock = d + '.IS'
-        amele = pd.read_excel('/home/gun/Documents/Amele/RaporTarihleri/{}.xlsx'.format(d))
-        raw_date = amele[0].iloc[j]
-        raw_date = datetime.strptime(raw_date, '%Y/%m/%d').strftime('%Y-%m-%d')
-        date = datetime.strptime(raw_date, '%Y-%m-%d')
-        buy_date = date + timedelta(days=1)
-        
-        while buy_date.weekday() >= 5:
-            days_until_monday = (7 - buy_date.weekday()) % 7
-            buy_date += timedelta(days=days_until_monday)
+        amele = pd.read_excel('/home/gun/Documents/Amele/RaporTarihleri/{}.xlsx'.format(d)).T
+        amele = amele[0].iloc[1:]
+        file_sell_date = pd.read_excel('/home/gun/Documents/Amele/RaporTarihleri/{}.xlsx'.format(d)).T
 
-        buy_date_str = buy_date.strftime('%Y-%m-%d')
-        data = yf.download(yfstock, start=buy_date_str)['Close']
-        buy_price = round(data.iloc[0], 2)
-        sell_price = round(data.iloc[-1], 2)
-        
-        print('Stock: ', d)
-        print('Date: ', buy_date_str)
-        print('Buying Price: ', buy_price)
-        print('Selling Price: ', sell_price)
+        if j in amele.index:    #Check If Buy Date Exists
+            raw_date = amele[j]
+            raw_date = datetime.strptime(raw_date, '%Y/%m/%d').strftime('%Y-%m-%d')
+            date = datetime.strptime(raw_date, '%Y-%m-%d')
+            buy_date = date + timedelta(days=1)
+
+            file_sell_date[0].iloc[0] = last_trading_day   # If Buy Day Exists Get Sell Date
+            raw_sell_date = file_sell_date[0].iloc[j]
+            raw_sell_date = datetime.strptime(raw_sell_date, '%Y/%m/%d').strftime('%Y-%m-%d')
+            sell_date = datetime.strptime(raw_sell_date, '%Y-%m-%d')
+            sell_date = sell_date + timedelta(days=1)
+            
+            while buy_date.weekday() >= 5:
+                days_until_monday = (7 - buy_date.weekday()) % 7
+                buy_date += timedelta(days=days_until_monday)
+            buy_date_str = buy_date.strftime('%Y-%m-%d')
+
+            while sell_date.weekday() >= 5:
+                days_until_monday2 = (7 - sell_date.weekday()) % 7
+                sell_date += timedelta(days=days_until_monday2)
+            sell_date_str = sell_date.strftime('%Y-%m-%d')
+
+            data = yf.download(yfstock, start=buy_date_str, end=sell_date_str)['Close']
+            # TODO CHECK IF DATA HAS MORE THAN 2 ITEMS (SO SELL DATE EXISTS) ELSE: BUY PRICE = SELL PRICE
+            # TODO ==> TO GET STOCKS AS WELL WITH NO OLD DATA
+            # TODO FIND A WAY TO GET SINGLE DATA AS BUY AND SELL FOR STOCKS HAVE ONLY 1 DATE (ASTOR...)
+            buy_price = round(data.iloc[0], 2)
+            sell_price = round(data.iloc[-1], 2)
+            
+            change = pd.Series([buy_price, sell_price])
+            pct_change = change.pct_change()
+            percent_change.append(round(pct_change[1] * 100, 2))
+
+        else:
+            percent_change.append(0)
         # break
-
-    break
+    hisseler_df['Getiri'] = percent_change
+    hisseler_df = hisseler_df.sort_values(by='Getiri', ascending=False)
+    show(hisseler_df)
+    # break
