@@ -126,12 +126,19 @@ for j in range(longes_row + 1):
                 sell_date += timedelta(days=days_until_monday2)
             sell_date_str = sell_date.strftime('%Y-%m-%d')
 
-            data = yf.download(yfstock, start=buy_date_str, end=sell_date_str)['Close']
-            # TODO CHECK IF DATA HAS MORE THAN 2 ITEMS (SO SELL DATE EXISTS) ELSE: BUY PRICE = SELL PRICE
-            # TODO ==> TO GET STOCKS AS WELL WITH NO OLD DATA
-            # TODO FIND A WAY TO GET SINGLE DATA AS BUY AND SELL FOR STOCKS HAVE ONLY 1 DATE (ASTOR...)
+            data = yf.download(yfstock, start=buy_date_str)['Close']
             buy_price = round(data.iloc[0], 2)
-            sell_price = round(data.iloc[-1], 2)
+
+            if sell_date_str in data.index:    #Check If Data Has Older Date
+                sell_price = round(data[sell_date_str], 2)
+            else:
+                sell_price = buy_price
+
+            # print(d)
+            # print(buy_date_str)
+            # print(buy_price)
+            # print(sell_date_str)
+            # print(sell_price)
             
             change = pd.Series([buy_price, sell_price])
             pct_change = change.pct_change()
