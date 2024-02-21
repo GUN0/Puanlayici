@@ -96,6 +96,7 @@ for j in range(longes_row + 1):
     percent_change = []
     last_trading_day = '2024/02/15'
     # stck = stck[:5]
+    # stck = stck[111:112]
     # list_of_df.append(hisseler_df)
 
     for d in stck:
@@ -104,7 +105,7 @@ for j in range(longes_row + 1):
         amele = amele[0].iloc[1:]
         file_sell_date = pd.read_excel('/home/gun/Documents/Amele/RaporTarihleri/{}.xlsx'.format(d)).T
 
-        if j in amele.index:    #Check If Buy Date Exists
+        if j in amele.index:    #Check If Buy Date Exists In File
             raw_date = amele[j]
             raw_date = datetime.strptime(raw_date, '%Y/%m/%d').strftime('%Y-%m-%d')
             date = datetime.strptime(raw_date, '%Y-%m-%d')
@@ -124,30 +125,55 @@ for j in range(longes_row + 1):
             while sell_date.weekday() >= 5:
                 days_until_monday2 = (7 - sell_date.weekday()) % 7
                 sell_date += timedelta(days=days_until_monday2)
-            sell_date_str = sell_date.strftime('%Y-%m-%d')
 
             data = yf.download(yfstock, start=buy_date_str)['Close']
-            buy_price = round(data.iloc[0], 2)
 
-            if sell_date_str in data.index:    #Check If Data Has Older Date
-                sell_price = round(data[sell_date_str], 2)
+            #Adjusting Buy Order According To Available YF_DATES
+            buy_day_difference = data.index[0] - buy_date
+
+            if buy_date in data.index:
+                buy_date = buy_date.strftime('%Y-%m-%d')
+                buy_price = round(data.iloc[0], 2)
+
+            elif 0 < buy_day_difference.days <= 10:
+                buy_date = data.index[0]
+                buy_date = buy_date.strftime('%Y-%m-%d')
+                buy_price = round(data.iloc[0], 2)
+
             else:
-                sell_price = buy_price
+                buy_price = 0
+           
+            #Adjusting Sell Order According To Available YF_DATES
+            closest_index = min(filter(lambda date: date > sell_date, data.index))
+            sell_day_difference = (closest_index - sell_date).days
+            closest_index = datetime.strftime(closest_index, '%Y-%m-%d')
 
-            # print(d)
-            # print(buy_date_str)
-            # print(buy_price)
-            # print(sell_date_str)
-            # print(sell_price)
+            if sell_date in data.index:    #Check If YF_Data Has Older Date
+                sell_price = round(data[sell_date], 2)
+                sell_date = sell_date.strftime('%Y-%m-%d')
+
+            elif 0 < sell_day_difference <= 10:  #Filter For Last Date (Tryna Prevent Infinite Last YF_DATE Loop)
+                sell_date = closest_index
+                sell_price = round(data[closest_index], 2)
+
+            else:
+                sell_price = 0
+
+            print(d)
+            print(buy_date)
+            print(buy_price)
+            print(sell_date)
+            print(sell_price)
             
             change = pd.Series([buy_price, sell_price])
             pct_change = change.pct_change()
             percent_change.append(round(pct_change[1] * 100, 2))
+            print(pct_change[1] * 100)
 
         else:
             percent_change.append(0)
         # break
     hisseler_df['Getiri'] = percent_change
-    hisseler_df = hisseler_df.sort_values(by='Getiri', ascending=False)
+    hisseler_df = hisseler_df.sort_values(by='F/K Puan', ascending=False)
     show(hisseler_df)
     # break
